@@ -14,6 +14,8 @@
 
 import asyncio
 import logging
+from flask import Flask
+from threading import Thread
 import os
 import time
 from pathlib import Path
@@ -653,6 +655,16 @@ async def post_init(application) -> None:
         logger.error(f"خطأ في تعيين أوامر البوت: {e}")
 
     logger.info("✅ البوت جاهز وجميع الخدمات تعمل")
+# أضف هذه الدالة قبل دالة main
+def run_web():
+    app = Flask(__name__)
+    @app.route('/')
+    def home():
+        return "Bot is Online"
+    # Railway يستخدم متغير البيئة PORT، وإذا لم يوجد نستخدم 8080
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
+
 def main() -> None:
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN غير موجود في المتغيرات البيئية!")
@@ -673,19 +685,16 @@ def main() -> None:
     )
 
     # ── تسجيل المعالجات
-    application.add_handler(CommandHandler("start",      start))
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("developer", cmd_developer))
-    
-    # 💥 تم إضافة أمر التحديث الجديد هنا برمجياً ليعمل بشكل سليم وتلقائي
-    application.add_handler(CommandHandler("update",     start))
-    
-    application.add_handler(CommandHandler("help",       help_command))
-    application.add_handler(CommandHandler("stats",      cmd_stats))
-    application.add_handler(CommandHandler("broadcast",  cmd_broadcast))
-    application.add_handler(CommandHandler("addvip",     cmd_addvip))
-    application.add_handler(CommandHandler("removevip",  cmd_removevip))
-    application.add_handler(CommandHandler("ban",        cmd_ban))
-    application.add_handler(CommandHandler("unban",      cmd_unban))
+    application.add_handler(CommandHandler("update", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("stats", cmd_stats))
+    application.add_handler(CommandHandler("broadcast", cmd_broadcast))
+    application.add_handler(CommandHandler("addvip", cmd_addvip))
+    application.add_handler(CommandHandler("removevip", cmd_removevip))
+    application.add_handler(CommandHandler("ban", cmd_ban))
+    application.add_handler(CommandHandler("unban", cmd_unban))
 
     # معالج الأزرار (كل callbacks)
     application.add_handler(CallbackQueryHandler(handle_callback))
@@ -697,7 +706,10 @@ def main() -> None:
 
     application.add_error_handler(error_handler)
 
-    logger.info("🚀 البوت يعمل...")
+    # تشغيل خادم الويب (Flask) في الخلفية لمنع الإغلاق
+    Thread(target=run_web).start()
+
+    logger.info("🚀 البوت يعمل الآن...")
     application.run_polling(drop_pending_updates=True)
 
 
