@@ -3,3 +3,5 @@ yt-dlp
 python-dotenv
 imageio-ffmpeg
 psutil
+requests
+flask
